@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+    <title>Find the shortest length of electrical wires</title>
+</head>
+<body>
+<h1>Find the shortest length of electrical wires</h1>
+<p>Click to the drawing area to create poles then press "Lay wires" to calculate the length</p>
+<button onclick="layWires()">Lay wires</button>
+<button onclick="removeWires()">Remove wires</button>
+<button onclick="removePoles()">Remove poles</button>
+<p>
+    <b>Minimum wire length:</b> 
+    <span id="minimum-wire-length">-</span>
+</p>
+
+<div id="drawing" style="width: 800px; border: 1px solid gray"></div>
+
+<!-- using svg manipulation library to simplify drawings -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.1.2/svg.min.js"></script>
+
+<script>
+const draw = SVG().addTo('#drawing').viewbox(0, 0, 800, 800)
+draw.fill("#808080")
+draw.click(function(event) {
+    addPole(event.offsetX, event.offsetY)
+})
+
+function printTotalDistance(totalDistance) {
+    document.getElementById("minimum-wire-length").textContent=totalDistance;
+}
+
+let poles = []
+let route = []
+
+function addPole(x, y) {
+    let symbol = draw.symbol()
+    symbol.rect(4, 4).fill('#666')
+    let use = draw.use(symbol).center(x - 2, y - 2)
+
+    poles.push({
+        x: x,
+        y: y
+    })
+}
+
+let wires = []
+
+function layWires() {
+    removeWires()
+    findRouteUsingPrimAlhorithm()
+
+    let totalDistance = 0;
+
+    // lay wires
+    route.forEach(function(wire) {
+        start = wire[0]
+        end = wire[1]
+
+        let line = draw.line(start.x, start.y, end.x, end.y)
+        line.stroke({
+            color: '#d3d3d3',
+            width: 1,
+            linecap: 'round'
+        })
+        wires.push(line)
+        totalDistance += getDistance(start, end)
+    })
+
+    totalDistance = Math.ceil(totalDistance)
+    printTotalDistance(totalDistance)
+
+    route = []
+}
+
+function removeWires() {
+    wires.forEach(function(line) {
+        line.remove()
+    })
+    wires = []
+    printTotalDistance('0')
+}
+
+function removePoles() {
+    poles = []
+    wires = []
+    draw.clear()
+}
+
+// https://en.wikipedia.org/wiki/Prim%27s_algorithm
+function findRouteUsingPrimAlhorithm() {
+    // Initialize a tree with a single vertex(pole), chosen arbitrarily from the graph.
+    let tree = [poles[0]]
+
+    let notInTree = [...poles]
+    // remove the first element as it's already in the tree
+    notInTree.splice(0, 1)
+
+    let edge
+    while (notInTree.length > 0) {
+        let minimumDistance = 1e10 // infinite
+
+        // Grow the tree by one edge: of the edges that connect the tree to vertices not yet in the tree, 
+        // find the minimum-weight edge, and transfer it to the tree.
+        tree.forEach(function(treePole, treePoleIndex) {
+            notInTree.forEach(function(notInTreePole, notInTreePoleIndex) {
+                let distance = getDistance(treePole, notInTreePole)
+                if (distance < minimumDistance) {
+                    minimumDistance = distance
+                    edge = [treePoleIndex, notInTreePoleIndex]
+                }
+            })
+        })
+        route.push([tree[edge[0]], notInTree[edge[1]]])
+
+        // add pole to the tree
+        tree.push(notInTree[edge[1]])
+        notInTree.splice(edge[1], 1)
+    }
+    return route
+}
+
+// d = √ (x2 – x1)^2 + (y2 – y1)^2
+function getDistance(a, b) {
+    return Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2)
+}
+
+</script>
+</body>
+</html>
